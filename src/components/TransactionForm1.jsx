@@ -2,19 +2,23 @@
 import { z } from "zod"
 import { DynamicForm } from "@/components/DynamicForm" // uses the API-enabled DynamicForm
 
-// 1) Validation (matches your Go JSON)
+// 1) Validation (matches your Go JSON). Coerce age from string -> number so validation works with HTML inputs.
 const Schema = z.object({
   id: z.string().min(1),
   person: z.object({
     uid: z.string().min(1),
     name: z.string().min(1),
-    age: z.number().int().min(0),
+    // coerce string -> number (useful when input value comes from <input type="number" />)
+    age: z.preprocess((val) => {
+      if (typeof val === "string" && val.trim() !== "") return Number(val)
+      return val
+    }, z.number().int().min(0)),
     gender: z.string().min(1),
     contact: z.string().min(1),
     location: z.string().min(1),
   }),
   ip_address: z.string().min(1),
-  timestamp: z.string().min(1), // using <input type="datetime-local" />
+  timestamp: z.string().min(1), // will be converted to ISO Z in beforeSubmit
   operator_id: z.string().min(1),
   machine_id: z.string().min(1),
 
@@ -29,6 +33,7 @@ const Schema = z.object({
 const fields = [
   { name: "id", type: "text", label: "ID", placeholder: "txn_123" },
 
+  // Using dot-names which many form libs will nest into person.{...}
   { name: "person.uid", type: "text", label: "Person UID", placeholder: "uuid-v4" },
   { name: "person.name", type: "text", label: "Name", placeholder: "Alice" },
   { name: "person.age", type: "number", label: "Age", placeholder: "30" },
@@ -75,27 +80,99 @@ export default function Transaction1Form() {
       fields={fields}
       defaultValues={defaults}
       submitLabel="Save Type 1"
-      // convert UI JSON -> devices[]
+      // convert UI JSON -> devices[] and normalize timestamp/age/optional fields
       beforeSubmit={(values) => {
+        // 1) Person: support both nested `person` and dotted fields like 'person.uid'
+        const personFromDotted = {
+          uid: values["person.uid"],
+          name: values["person.name"],
+          age: values["person.age"],
+          gender: values["person.gender"],
+          contact: values["person.contact"],
+          location: values["person.location"],
+        }
+
+        const person = values.person && typeof values.person === "object"
+          ? {
+              uid: values.person.uid ?? personFromDotted.uid ?? "",
+              name: values.person.name ?? personFromDotted.name ?? "",
+              age: values.person.age ?? personFromDotted.age ?? 0,
+              gender: values.person.gender ?? personFromDotted.gender ?? "",
+              contact: values.person.contact ?? personFromDotted.contact ?? "",
+              location: values.person.location ?? personFromDotted.location ?? "",
+            }
+          : {
+              uid: personFromDotted.uid ?? "",
+              name: personFromDotted.name ?? "",
+              age: personFromDotted.age ?? 0,
+              gender: personFromDotted.gender ?? "",
+              contact: personFromDotted.contact ?? "",
+              location: personFromDotted.location ?? "",
+            }
+
+        // ensure age is a number
+        person.age = Number(person.age) || 0
+
+        // 2) Devices: parse JSON from textarea, or accept already-provided array
         let devices = []
         try {
-          const parsed = values.devices_json ? JSON.parse(values.devices_json) : []
+          const parsed =
+            values.devices_json && typeof values.devices_json === "string"
+              ? JSON.parse(values.devices_json)
+              : values.devices || []
           if (Array.isArray(parsed)) devices = parsed
-        } catch {}
-        const { devices_json, ...rest } = values
-        return { ...rest, devices }
+        } catch (e) {
+          // parsing failed — fallback to empty
+          devices = []
+        }
+
+        // 3) Timestamp: convert datetime-local (local time without timezone) to ISO Z string
+        let timestamp = values.timestamp || ""
+        if (timestamp) {
+          // if user used <input type="datetime-local" />, the value will be like "2025-09-01T10:00"
+          // new Date(...) will treat it as local and toISOString() converts to UTC with Z.
+          const d = new Date(timestamp)
+          if (!isNaN(d.getTime())) {
+            timestamp = d.toISOString()
+          }
+        }
+
+        // 4) Build final payload and omit empty optional fields
+        const payload = {
+          id: values.id,
+          person,
+          ip_address: values.ip_address,
+          timestamp,
+          operator_id: values.operator_id,
+          machine_id: values.machine_id,
+          devices,
+        }
+        console.log(payload);
+        
+
+        if (values.introducer_id && values.introducer_id.toString().trim() !== "") {
+          payload.introducer_id = values.introducer_id
+        }
+        if (
+          values.relation_with_introducer &&
+          values.relation_with_introducer.toString().trim() !== ""
+        ) {
+          payload.relation_with_introducer = values.relation_with_introducer
+        }
+
+        return payload
       }}
       // call your backend for type 1
       api={{
         baseUrl: import.meta.env.VITE_API_BASE_URL, // set in .env
         method: "POST",
         headers: { "X-Transaction": "1" }, // optional
-        routes: { 1: "/api/transactions/type1" }, // not used if getEndpoint provided
+        routes: { 1: "/transaction/1" }, // not used if getEndpoint provided
         onSuccess: (data) => console.log("Type1 OK:", data),
         onError: (err) => console.error("Type1 ERR:", err),
       }}
       // since this is Type 1, force the endpoint:
-      getEndpoint={() => "/api/transactions/type1"}
+      getEndpoint={() => "/transaction/1"}
     />
   )
 }

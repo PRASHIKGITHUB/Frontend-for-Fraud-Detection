@@ -3,12 +3,16 @@ import { z } from "zod"
 import { DynamicForm } from "@/components/DynamicForm"
 
 // 1) Validation to match your Go JSON for Transaction2
+// Coerce age string -> number so HTML inputs + zod work together.
 const Schema = z.object({
   id: z.string().min(1),
   person: z.object({
     uid: z.string().min(1),
     name: z.string().min(1),
-    age: z.number().int().min(0),
+    age: z.preprocess((val) => {
+      if (typeof val === "string" && val.trim() !== "") return Number(val)
+      return val
+    }, z.number().int().min(0)),
     gender: z.string().min(1),
     contact: z.string().min(1),
     location: z.string().min(1),
@@ -67,26 +71,83 @@ export default function Transaction2Form() {
       fields={fields}
       defaultValues={defaults}
       submitLabel="Save Type 2"
-      // Convert UI JSON -> devices[]
+      // Convert UI JSON -> devices[] and normalize timestamp/age/flattened fields
       beforeSubmit={(values) => {
+        // Support both nested person object and dotted names like 'person.uid'
+        const personFromDotted = {
+          uid: values["person.uid"],
+          name: values["person.name"],
+          age: values["person.age"],
+          gender: values["person.gender"],
+          contact: values["person.contact"],
+          location: values["person.location"],
+        }
+
+        const person = values.person && typeof values.person === "object"
+          ? {
+              uid: values.person.uid ?? personFromDotted.uid ?? "",
+              name: values.person.name ?? personFromDotted.name ?? "",
+              age: values.person.age ?? personFromDotted.age ?? 0,
+              gender: values.person.gender ?? personFromDotted.gender ?? "",
+              contact: values.person.contact ?? personFromDotted.contact ?? "",
+              location: values.person.location ?? personFromDotted.location ?? "",
+            }
+          : {
+              uid: personFromDotted.uid ?? "",
+              name: personFromDotted.name ?? "",
+              age: personFromDotted.age ?? 0,
+              gender: personFromDotted.gender ?? "",
+              contact: personFromDotted.contact ?? "",
+              location: personFromDotted.location ?? "",
+            }
+
+        // ensure age is a number
+        person.age = Number(person.age) || 0
+
+        // Devices: parse JSON from textarea, or accept already-provided array
         let devices = []
         try {
-          const parsed = values.devices_json ? JSON.parse(values.devices_json) : []
+          const parsed =
+            values.devices_json && typeof values.devices_json === "string"
+              ? JSON.parse(values.devices_json)
+              : values.devices || []
           if (Array.isArray(parsed)) devices = parsed
-        } catch {}
-        const { devices_json, ...rest } = values
-        return { ...rest, devices }
+        } catch (e) {
+          devices = []
+        }
+
+        // Timestamp: convert datetime-local (local time without timezone) to ISO Z string
+        let timestamp = values.timestamp || ""
+        if (timestamp) {
+          const d = new Date(timestamp)
+          if (!isNaN(d.getTime())) {
+            timestamp = d.toISOString()
+          }
+        }
+
+        // Final payload
+        const payload = {
+          id: values.id,
+          person,
+          ip_address: values.ip_address,
+          timestamp,
+          operator_id: values.operator_id,
+          machine_id: values.machine_id,
+          devices,
+        }
+
+        return payload
       }}
       // POST to your backend (adjust baseUrl and path)
       api={{
         baseUrl: import.meta.env.VITE_API_BASE_URL, // e.g. http://localhost:8080
         method: "POST",
-        routes: { 2: "/api/transactions/type2" }, // not strictly needed because we force the endpoint below
+        routes: { 2: "/transaction/2" },
         onSuccess: (data) => console.log("Type2 OK:", data),
         onError: (err) => console.error("Type2 ERR:", err),
       }}
       // Force the endpoint since this component is only for type 2
-      getEndpoint={() => "/api/transactions/type2"}
+      getEndpoint={() => "/transaction/2"}
     />
   )
 }
