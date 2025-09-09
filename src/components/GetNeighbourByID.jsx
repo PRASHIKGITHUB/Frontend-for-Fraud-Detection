@@ -19,7 +19,7 @@ function createNodesFromData(data) {
   });
 }
 
-/* ---------------- SimpleNode: colored shapes for different labels ---------------- */
+
 function SimpleNode({ data }) {
   const label = (data.label || "").toLowerCase();
 
@@ -67,7 +67,7 @@ function SimpleNode({ data }) {
     );
   }
 
-  // fallback gray shape
+
   return (
     <div className="flex flex-col items-center justify-center p-1" style={{ width: 120 }}>
       <svg width="100" height="60" viewBox="0 0 100 60">
@@ -78,32 +78,31 @@ function SimpleNode({ data }) {
   );
 }
 
-/* ---------------- Main Component ---------------- */
 export default function GetNeighbourByID() {
-  // Vite env var (set VITE_API_BASE in .env) or fallback to localhost.
+
   const defaultBase = import.meta?.env?.VITE_API_BASE || "http://localhost:8000";
 
-  /* ---------- Inputs & UI state ---------- */
+
   const [baseUrl, setBaseUrl] = useState(defaultBase);
   const [txnId, setTxnId] = useState("");
   const [maxHops, setMaxHops] = useState(2);
 
-  /* ---------- Data state (starts empty) ---------- */
-  const [rawNodesData, setRawNodesData] = useState([]); // array of objects { label, props }
-  const [nodes, setNodes] = useState([]); // ReactFlow nodes (created from rawNodesData)
-  const [edges, setEdges] = useState([]); // ReactFlow edges
 
-  /* ---------- UI helpers ---------- */
-  const [hoveredNode, setHoveredNode] = useState(null); // data shown in details panel
-  const [availableLabels, setAvailableLabels] = useState([]); // unique labels from rawNodesData
-  const [visibleLabels, setVisibleLabels] = useState(new Set()); // which labels are toggled on
+  const [rawNodesData, setRawNodesData] = useState([]);
+  const [nodes, setNodes] = useState([]);
+  const [edges, setEdges] = useState([]);
+
+
+  const [hoveredNode, setHoveredNode] = useState(null); 
+  const [availableLabels, setAvailableLabels] = useState([]); 
+  const [visibleLabels, setVisibleLabels] = useState(new Set()); 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  /* ---------------- Memoized nodeTypes for React Flow (avoid warnings) ---------------- */
+
   const nodeTypes = useMemo(() => ({ typedNode: SimpleNode }), []);
 
-  /* ---------------- When rawNodesData changes: compute RF nodes + labels ---------------- */
+ 
   useEffect(() => {
     const created = createNodesFromData(rawNodesData);
     setNodes(created);
@@ -111,20 +110,18 @@ export default function GetNeighbourByID() {
     const labels = Array.from(new Set(rawNodesData.map((n) => n.label)));
     setAvailableLabels(labels);
 
-    // default visible labels -> all labels (only if user hasn't chosen anything yet)
+
     setVisibleLabels((prev) => {
       if (prev && prev.size > 0) return prev;
       return new Set(labels);
     });
   }, [rawNodesData]);
 
-  /* ---------------- Filter nodes according to visibleLabels ---------------- */
   const filteredNodes = useMemo(() => {
     if (!visibleLabels || visibleLabels.size === 0) return nodes;
     return nodes.filter((n) => visibleLabels.has(n.data.label));
   }, [nodes, visibleLabels]);
 
-  /* ---------------- Toggle label visibility ---------------- */
   const toggleLabel = useCallback((label) => {
     setVisibleLabels((prev) => {
       const next = new Set(prev);
@@ -134,7 +131,6 @@ export default function GetNeighbourByID() {
     });
   }, []);
 
-  /* ---------------- Fetch blast from API and REPLACE canvas with result ONLY ---------------- */
   const fetchBlast = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -155,14 +151,11 @@ export default function GetNeighbourByID() {
       console.log(data);
       
 
-      // Accept either array or { nodes, edges }
       const apiNodes = Array.isArray(data) ? data : data.nodes || [];
       const apiEdges = data.edges || [];
 
-      // REPLACE rawNodesData with API nodes only (do NOT merge with any sample)
       setRawNodesData(apiNodes);
 
-      // convert API edges to ReactFlow edges if provided
       if (apiEdges && apiEdges.length) {
         const rfEdges = apiEdges.map((e, i) => ({
           id: `e-${i}`,
@@ -171,7 +164,7 @@ export default function GetNeighbourByID() {
         }));
         setEdges(rfEdges);
       } else {
-        setEdges([]); // clear edges if API returned none
+        setEdges([]); 
       }
     } catch (err) {
       console.error("Fetch error:", err);
@@ -181,11 +174,10 @@ export default function GetNeighbourByID() {
     }
   }, [baseUrl, txnId, maxHops]);
 
-  /* ---------------- Hover handlers for details panel ---------------- */
+
   const onNodeMouseEnter = useCallback((event, node) => setHoveredNode(node?.data ?? null), []);
   const onNodeMouseLeave = useCallback(() => setHoveredNode(null), []);
 
-  /* ---------------- UI: no Reset (so sample data is never reintroduced) ---------------- */
 
   return (
     <div className="relative h-[90vh] w-full rounded-lg border p-3 bg-white">

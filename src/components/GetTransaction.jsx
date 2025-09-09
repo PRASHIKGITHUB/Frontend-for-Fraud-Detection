@@ -35,15 +35,15 @@ export default function GetData() {
   async function onSubmit(values) {
     const base = import.meta.env.VITE_API_BASE_URL || ""
 
-    // Build path that matches your Gin routes exactly
+
     let path = ""
     if (values.resource === "person") {
       path = values.mode === "all"
-        ? "/person/"                            // GET /person/
+        ? "/person/"                           
         : `/person/${encodeURIComponent(values.identifier)}`
     } else {
       path = values.mode === "all"
-        ? "/transaction/"                       // GET /transaction/
+        ? "/transaction/"                       
         : `/transaction/${encodeURIComponent(values.identifier)}`
     }
 

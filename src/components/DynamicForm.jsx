@@ -26,26 +26,7 @@ import {
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 
-/**
- * DynamicForm
- * Props:
- * - schema: zod schema
- * - fields: array of { name, type, label, placeholder, options?, rows?, description?, checkboxLabel? }
- * - defaultValues: RHF default values
- * - submitLabel: button text
- * - className: form container classes
- * - onSubmit(values): fallback submit if no API config is provided
- * - beforeSubmit(values): optional transform -> returns payload to send
- * - api: {
- *     baseUrl?: string,               // e.g. import.meta.env.VITE_API_BASE_URL
- *     routes?: { [key: number]: string | [string, string?] }, // 1 -> "/t1", 2 -> "/t2"
- *     method?: string,                // default "POST"
- *     headers?: Record<string,string>,// extra headers
- *     onSuccess?: (data, payload) => void,
- *     onError?: (error, payload) => void,
- *   }
- * - getEndpoint?: (payload) => string  // if provided, overrides routes lookup
- */
+
 export function DynamicForm({
   schema,
   fields,
@@ -63,18 +44,16 @@ export function DynamicForm({
   async function handleSubmit(values) {
     const payload = beforeSubmit ? beforeSubmit(values) : values
 
-    // If API config provided, post to backend
+
     if (api) {
       try {
-        // Choose endpoint:
-        // 1) custom getEndpoint(payload) OR
-        // 2) api.routes[Number(payload.transaction_type)]
+    
         let endpoint = getEndpoint ? getEndpoint(payload) : undefined
         if (!endpoint && api?.routes) {
           const t = Number(payload.transaction_type)
           const route = api.routes[t]
           if (Array.isArray(route)) {
-            // allow [path, queryString] if you want
+       
             endpoint = route.filter(Boolean).join("")
           } else {
             endpoint = route
@@ -116,7 +95,7 @@ export function DynamicForm({
       }
     }
 
-    // Fallback: no API config, call provided onSubmit or toast
+  
     if (onSubmit) return onSubmit(payload)
     toast("Form submitted", {
       description: (

@@ -2,8 +2,7 @@
 import { z } from "zod"
 import { DynamicForm } from "@/components/DynamicForm"
 
-// 1) Validation to match your Go JSON for Transaction2
-// Coerce age string -> number so HTML inputs + zod work together.
+
 const Schema = z.object({
   id: z.string().min(1),
   person: z.object({
@@ -18,15 +17,15 @@ const Schema = z.object({
     location: z.string().min(1),
   }),
   ip_address: z.string().min(1),
-  timestamp: z.string().min(1), // using <input type="datetime-local" />
+  timestamp: z.string().min(1), 
   operator_id: z.string().min(1),
   machine_id: z.string().min(1),
 
-  // UI-only field; we’ll convert to devices[] before submit
+
   devices_json: z.string().optional().default("[]"),
 })
 
-// 2) Fields to render (dot paths for nested person.*)
+
 const fields = [
   { name: "id", type: "text", label: "ID", placeholder: "txn_123" },
 
@@ -53,7 +52,7 @@ const fields = [
   },
 ]
 
-// 3) Defaults matching the nested shape
+
 const defaults = {
   id: "",
   person: { uid: "", name: "", age: 0, gender: "", contact: "", location: "" },
@@ -71,9 +70,9 @@ export default function Transaction2Form() {
       fields={fields}
       defaultValues={defaults}
       submitLabel="Save Type 2"
-      // Convert UI JSON -> devices[] and normalize timestamp/age/flattened fields
+    
       beforeSubmit={(values) => {
-        // Support both nested person object and dotted names like 'person.uid'
+      
         const personFromDotted = {
           uid: values["person.uid"],
           name: values["person.name"],
@@ -101,10 +100,10 @@ export default function Transaction2Form() {
               location: personFromDotted.location ?? "",
             }
 
-        // ensure age is a number
+   
         person.age = Number(person.age) || 0
 
-        // Devices: parse JSON from textarea, or accept already-provided array
+     
         let devices = []
         try {
           const parsed =
@@ -116,7 +115,7 @@ export default function Transaction2Form() {
           devices = []
         }
 
-        // Timestamp: convert datetime-local (local time without timezone) to ISO Z string
+       
         let timestamp = values.timestamp || ""
         if (timestamp) {
           const d = new Date(timestamp)
@@ -125,7 +124,7 @@ export default function Transaction2Form() {
           }
         }
 
-        // Final payload
+   
         const payload = {
           id: values.id,
           person,
@@ -138,15 +137,15 @@ export default function Transaction2Form() {
 
         return payload
       }}
-      // POST to your backend (adjust baseUrl and path)
+     
       api={{
-        baseUrl: import.meta.env.VITE_API_BASE_URL, // e.g. http://localhost:8080
+        baseUrl: import.meta.env.VITE_API_BASE_URL, 
         method: "POST",
         routes: { 2: "/transaction/2" },
         onSuccess: (data) => console.log("Type2 OK:", data),
         onError: (err) => console.error("Type2 ERR:", err),
       }}
-      // Force the endpoint since this component is only for type 2
+     
       getEndpoint={() => "/transaction/2"}
     />
   )

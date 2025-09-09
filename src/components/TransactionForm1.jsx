@@ -1,14 +1,14 @@
 // JS component for Transaction Type 1
 import { z } from "zod"
-import { DynamicForm } from "@/components/DynamicForm" // uses the API-enabled DynamicForm
+import { DynamicForm } from "@/components/DynamicForm" 
 
-// 1) Validation (matches your Go JSON). Coerce age from string -> number so validation works with HTML inputs.
+
 const Schema = z.object({
   id: z.string().min(1),
   person: z.object({
     uid: z.string().min(1),
     name: z.string().min(1),
-    // coerce string -> number (useful when input value comes from <input type="number" />)
+  
     age: z.preprocess((val) => {
       if (typeof val === "string" && val.trim() !== "") return Number(val)
       return val
@@ -18,22 +18,22 @@ const Schema = z.object({
     location: z.string().min(1),
   }),
   ip_address: z.string().min(1),
-  timestamp: z.string().min(1), // will be converted to ISO Z in beforeSubmit
+  timestamp: z.string().min(1), 
   operator_id: z.string().min(1),
   machine_id: z.string().min(1),
 
-  // UI-only; we’ll convert to devices[]
+ 
   devices_json: z.string().optional().default("[]"),
 
   introducer_id: z.string().optional(),
   relation_with_introducer: z.string().optional(),
 })
 
-// 2) Fields
+
 const fields = [
   { name: "id", type: "text", label: "ID", placeholder: "txn_123" },
 
-  // Using dot-names which many form libs will nest into person.{...}
+
   { name: "person.uid", type: "text", label: "Person UID", placeholder: "uuid-v4" },
   { name: "person.name", type: "text", label: "Name", placeholder: "Alice" },
   { name: "person.age", type: "number", label: "Age", placeholder: "30" },
@@ -60,7 +60,7 @@ const fields = [
   { name: "relation_with_introducer", type: "text", label: "Relation", placeholder: "colleague / friend" },
 ]
 
-// 3) Defaults
+
 const defaults = {
   id: "",
   person: { uid: "", name: "", age: 0, gender: "", contact: "", location: "" },
@@ -80,9 +80,9 @@ export default function Transaction1Form() {
       fields={fields}
       defaultValues={defaults}
       submitLabel="Save Type 1"
-      // convert UI JSON -> devices[] and normalize timestamp/age/optional fields
+    
       beforeSubmit={(values) => {
-        // 1) Person: support both nested `person` and dotted fields like 'person.uid'
+ 
         const personFromDotted = {
           uid: values["person.uid"],
           name: values["person.name"],
@@ -110,10 +110,9 @@ export default function Transaction1Form() {
               location: personFromDotted.location ?? "",
             }
 
-        // ensure age is a number
+   
         person.age = Number(person.age) || 0
 
-        // 2) Devices: parse JSON from textarea, or accept already-provided array
         let devices = []
         try {
           const parsed =
@@ -122,22 +121,21 @@ export default function Transaction1Form() {
               : values.devices || []
           if (Array.isArray(parsed)) devices = parsed
         } catch (e) {
-          // parsing failed — fallback to empty
+
           devices = []
         }
 
-        // 3) Timestamp: convert datetime-local (local time without timezone) to ISO Z string
+    
         let timestamp = values.timestamp || ""
         if (timestamp) {
-          // if user used <input type="datetime-local" />, the value will be like "2025-09-01T10:00"
-          // new Date(...) will treat it as local and toISOString() converts to UTC with Z.
+        
           const d = new Date(timestamp)
           if (!isNaN(d.getTime())) {
             timestamp = d.toISOString()
           }
         }
 
-        // 4) Build final payload and omit empty optional fields
+      
         const payload = {
           id: values.id,
           person,
@@ -162,16 +160,16 @@ export default function Transaction1Form() {
 
         return payload
       }}
-      // call your backend for type 1
+   
       api={{
-        baseUrl: import.meta.env.VITE_API_BASE_URL, // set in .env
+        baseUrl: import.meta.env.VITE_API_BASE_URL, 
         method: "POST",
-        headers: { "X-Transaction": "1" }, // optional
-        routes: { 1: "/transaction/1" }, // not used if getEndpoint provided
+        headers: { "X-Transaction": "1" }, 
+        routes: { 1: "/transaction/1" },
         onSuccess: (data) => console.log("Type1 OK:", data),
         onError: (err) => console.error("Type1 ERR:", err),
       }}
-      // since this is Type 1, force the endpoint:
+   
       getEndpoint={() => "/transaction/1"}
     />
   )
