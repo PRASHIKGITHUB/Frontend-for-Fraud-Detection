@@ -66,3 +66,51 @@ export default function App() {
     </div>
   )
 }
+
+
+// npm i reactflow
+// import React from "react";
+// import ReactFlow, { Background, Controls } from "reactflow";
+// import "reactflow/dist/style.css";
+
+// const nodes = [
+//   { id: "1", data: { label: "Node 1" }, position: { x: 50, y: 50 } },
+//   { id: "2", data: { label: "Node 2" }, position: { x: 250, y: 150 } },
+// ];
+// const edges = [{ id: "e1-2", source: "1", target: "2" }];
+
+// export default function MyFlow() {
+//   return (
+//     <div style={{ height: 500, border: "1px solid #ddd" }}>
+//       <ReactFlow nodes={nodes} edges={edges}>
+//         <Background />
+//         <Controls />
+//       </ReactFlow>
+//     </div>
+//   );
+// }
+
+
+// npm i react-force-graph
+// import React from "react";
+// import ForceGraph2D from "react-force-graph-2d";
+
+// const data = {
+//   nodes: [{ id: "A" }, { id: "B" }, { id: "C" }],
+//   links: [{ source: "A", target: "B" }, { source: "A", target: "C" }],
+// };
+
+// export default function ForceDemo() {
+//   return (
+//     <div style={{ height: 500 }}>
+//       <ForceGraph2D
+//         graphData={data}
+//         nodeLabel="id"
+//         nodeAutoColorBy="id"
+//         width={800}
+//         height={500}
+//       />
+//     </div>
+//   );
+// }
+
