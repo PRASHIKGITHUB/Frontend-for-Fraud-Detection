@@ -7,8 +7,11 @@ import { Input } from "@/components/ui/input"   // <-- import shadcn Input
 import Transaction1Form from "@/components/TransactionForm1"
 import Transaction2Form from "@/components/TransactionForm2"
 import GetData from "@/components/GetTransaction"
-import GraphView from "@/components/GetNeighbourByID"
-
+// import GraphView from "@/components/GetNeighbourByID"
+// import GraphView from "@/components/react_force_graph_2d"
+// import GraphView from "@/components/react_cytoscapejs"
+import GraphView from "@/components/vis_js"
+// import GraphView from "@/components/sigma_js"
 export default function App() {
   const [view, setView] = useState("t1") // "t1" | "t2" | "get" | "graph"
   const [inputId, setInputId] = useState("")
